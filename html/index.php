@@ -157,7 +157,7 @@ $comments = $pdo->query("SELECT * FROM comments")->fetchAll();
     <p>SQL traite la totalité de la requête comme une chaîne de caractères. Si cette chaîne est formée en ajoutant directement les entrées de l'utilisateur sans validation, cela peut mener à des vulnérabilités.</p>
 
     <h3>Étape 3: Visualisation de l'injection</h3>
-    <p>Un attaquant pourrait saisir :</p>
+    <p>Par exemple, pour contourner un système de connexion mal codé, un attaquant pourrait saisir :</p>
     <code>john_doe'; --</code>
     <p>Transformant la requête en :</p>
     <code>
