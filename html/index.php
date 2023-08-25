@@ -10,7 +10,7 @@ $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
+    PDO::ATTR_EMULATE_PREPARES   => true,
 ];
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
@@ -22,10 +22,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = $_POST["username"];
     $comment = $_POST["comment"];
 
-    $stmt = $pdo->prepare("INSERT INTO comments (username, comment) VALUES (?, ?)");
-    $stmt->execute([$username, $comment]);
+// Injection vulnérable
+if(isset($_POST['comment']) && !empty($_POST['comment'])
+    && isset($_POST['username']) && !empty($_POST['username'])) {
+    
+    // Cette ligne est vulnérable car elle concatène directement l'entrée utilisateur à la requête SQL
+    $requete = "INSERT INTO comments SET username='" . $username . "', comment='" . $comment . "'";
+    $pdo->query($requete);
 }
 
+// Récupérer tous les commentaires
+$comments = $pdo->query('SELECT * FROM comments')->fetchAll();
+}
 $comments = $pdo->query("SELECT * FROM comments")->fetchAll();
 
 ?>

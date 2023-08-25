@@ -20,7 +20,7 @@ try {
         comment TEXT NOT NULL
     )";
 
-    $pdo->exec($sql);
+    $pdo->query($sql);
     echo "Table comments created successfully";
 
     // Insertion de commentaires d'exemple
