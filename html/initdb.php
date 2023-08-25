@@ -1,9 +1,6 @@
 <?php
-$host = 'db';
-$db   = 'testdatabase';
-$user = 'user';
-$pass = 'password';
-$charset = 'utf8mb4';
+
+require 'connect.php';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
