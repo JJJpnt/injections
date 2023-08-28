@@ -1,5 +1,6 @@
 <?php
 
+// die($requete);
 require_once "connect.php";
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
@@ -20,11 +21,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 // Injection vulnérable
 if(isset($_POST['comment']) && !empty($_POST['comment'])
-    && isset($_POST['username']) && !empty($_POST['username'])) {
+&& isset($_POST['username']) && !empty($_POST['username'])) {
     
-    // Cette ligne est vulnérable car elle concatène directement l'entrée utilisateur à la requête SQL
+    
+    
+    
+    
+    // Exemple d'une mauvaise utilisation de PDO : Ici les requêtes ne sont pas préparées
+    // Le moteur ne saura donc pas séparer les instructions SQL de l'entrée utilisateur
+    // Et n'aura donc aucun moyen de se protéger contre des instructions SQL malveillantes
+    // Entrées par l'utilisateur, par exemple dans un formulaire
+    
+    // Cette ligne est donc vulnérable car elle concatène directement l'entrée utilisateur à la requête SQL
     $requete = "INSERT INTO comments SET username='" . $username . "', comment='" . $comment . "'";
+    // Dans le cas de l'exemple simple donné dans la première partie du cours, le moteur recevrait donc comme requête :
+    // $requete = "INSERT INTO comments SET username='jjj', comment='username'; DROP TABLE comments; --'";
+    // Ce qui supprimerait la table des commentaires !
+    
+    // Cette ligne est aussi vulnérable, car elle utilise directement la fonction query() sans préparation qui n'offre aucune protection
     $pdo->query($requete);
+
+
+    
+    /* Correction (SQL): (Pour les corrections des failles XSS, voir plus bas vers la ligne 180)
+    // Exemple d'une utilisation correcte de PDO : Ici les requêtes sont préparées
+    // Le moteur saura donc séparer les instructions SQL de l'entrée utilisateur
+    // Et pourra donc se protéger contre des instructions SQL malveillantes
+    $requete = "INSERT INTO comments SET username = :user, comment = :comment";
+    $stmt = $pdo->prepare($requete);
+    $stmt->execute([
+        'user' => strip_tags($username),
+        'comment' => strip_tags($comment)
+    ]);
+    */
+
+    /* Pour aller plus loin :
+    // On peut aussi utiliser la méthode bindParam() pour lier les paramètres à la requête
+    // Cela permet également de spécifier le type de données attendu pour chaque paramètre
+    // Par exemple, si on attend un entier, on peut utiliser PDO::PARAM_INT
+    // Ce qui offre une protection supplémentaire contre les injections SQL
+    // Exemple :
+    $stmt->bindParam(':user', strip_tags($username), PDO::PARAM_STR);
+    $stmt->bindParam(':comment', strip_tags($comment), PDO::PARAM_STR);
+    $stmt->execute();
+    */
+
+    // Récupérer tous les commentaires
+    $comments = $pdo->query('SELECT * FROM comments')->fetchAll();
 }
 
 // Exemple d'injection qui ajoute un commentaire supplémentaire :
@@ -34,10 +77,7 @@ if(isset($_POST['comment']) && !empty($_POST['comment'])
 // username'; INSERT INTO comments (username, comment) SELECT 'all_users', GROUP_CONCAT(CONCAT(username, ':', password) SEPARATOR '\n<br>') FROM utilisateurs; --
 
 
-// Récupérer tous les commentaires
-$comments = $pdo->query('SELECT * FROM comments')->fetchAll();
 }
-$comments = $pdo->query("SELECT * FROM comments")->fetchAll();
 
 ?>
 
@@ -146,10 +186,31 @@ $comments = $pdo->query("SELECT * FROM comments")->fetchAll();
 <h2>Commentaires :</h2>
 
 <ul>
+    <!-- Ici on affiche tous les commentaires récupérés : Problème : -->
+    <!-- Si un utilisateur entrait du code HTML ou JavaScript dans le champ de commentaire, il serait exécuté par le navigateur de l'utilisateur qui visite la page. -->
     <?php foreach ($comments as $comment) { ?>
         <li><strong><?php echo $comment["username"]; ?></strong>: <?php echo $comment["comment"]; ?></li>
     <?php } ?>
 </ul>
+
+    <!-- Il faut donc, soit à l'entrée en base de données, soit à l'affichage, désinfecter les entrées utilisateur pour éviter les attaques XSS. -->
+    <!-- Comment s'y prendre, c'est simple : Il faut échapper les sorties, c'est-à-dire transformer les caractères spéciaux en entités HTML, et le navigateur ne les interprétera plus comme du code mais uniquement comme du texte à afficher. -->
+    <!-- Pour cela, on peut utiliser la fonction PHP htmlspecialchars() qui transforme les caractères spéciaux en entités HTML. -->
+    <!-- Exemple, dans les echo ci-dessus on procéderait ainsi : -->
+    <!-- echo htmlspecialchars($comment["username"], ENT_QUOTES); -->
+    <!-- echo htmlspecialchars($comment["comment"], ENT_QUOTES) ; -->
+    <!-- (ENT_QUOTES ajoute les guillemets simples à la liste des caractères à échapper.) -->
+    <!-- On peut aussi utiliser la fonction strip_tags() qui supprime tous les tags HTML et PHP d'une chaîne de caractères. -->
+    <!-- Mais elle enlève radicalement tout tag de l'entrée utilisateur : ce qui peut être problématique dans certains cas, par exemple si on veut créer un blog -->
+
+    <!-- Pour aller plus loin : -->
+    <!-- On peut aussi utiliser la fonction PHP htmlentities() qui convertit tous les caractères éligibles en entités HTML. -->
+    <!-- On peut aussi utiliser la fonction PHP filter_var() qui filtre une variable avec un filtre spécifique. -->
+    <!-- On peut aussi utiliser la fonction PHP filter_input() qui obtient une variable externe et la filtre avec un filtre spécifique. -->
+    <!-- On peut aussi utiliser la fonction PHP filter_var_array() qui filtre plusieurs variables avec un ou plusieurs filtres spécifiques. -->
+    <!-- On peut aussi utiliser la fonction PHP filter_input_array() qui obtient plusieurs variables externes et les filtre avec un ou plusieurs filtres spécifiques. -->
+    <!-- On peut aussi utiliser la fonction PHP filter_list() qui retourne la liste des filtres disponibles. -->
+    <!-- ... -->
 
 <div class="info-section">
     <h2>Comprendre l'Injection SQL</h2>
